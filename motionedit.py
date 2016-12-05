@@ -21,7 +21,95 @@ from bpy.types import (
 from bpy.props import (
     StringProperty,
     FloatProperty,
+    BoolProperty,
+    EnumProperty,
 )
+
+class MotionEditModePanel(bpy.types.Panel):
+    bl_label = "Motion Edit"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+
+    def draw(self, context):
+        wm = context.window_manager
+        layout = self.layout
+
+        if not hasattr(wm, "motionedit_type"):
+            layout.label("Scene does not have a property 'motionedit_type'")
+ 
+        elif wm.motionedit_type != 'None':
+            layout.label("motion-edit : " + wm.motionedit_type, icon="COLOR_GREEN")
+ 
+        else:
+            layout.label(wm.motionedit_type)
+
+        layout = self.layout
+        row = layout.row()
+        row.prop(wm, "motionedit_type", expand=True)
+
+
+def motionedit_update(self, context):
+    wm = context.window_manager
+    print("motionedit_update() invoked : " + str(wm.motionedit_type))
+    if wm.motionedit_type == 'Smooth' or wm.motionedit_type == 'Increase' or wm.motionedit_type == 'Decrease':
+        print("creating fcurve for motion-edit Smooth")
+        for obj in bpy.context.selected_objects:
+            anim = obj.animation_data
+            if anim is None or anim.action is None:
+                print("%s has no actions"%(obj.name))
+                #print("motion-edit mode cancelled. has no fcurves to edit")
+                #wm.motionedit_type = 'None'
+            else:
+                print("%s has some actions"%(obj.name))
+                dpath = "motionedit_curve"
+                fc_mec = anim.action.fcurves.find(dpath, index=0)
+                if fc_mec is None:
+                    print("%s : path : %s not found\n" % (obj.name, dpath))
+                    if wm.motionedit_type == 'Smooth':
+                        obj.motionedit_curve = 0.0
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=0)
+                        obj.motionedit_curve = 1.0
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=15)
+                        obj.motionedit_curve = 0.0
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=30)
+                    elif wm.motionedit_type == 'Increase':
+                        obj.motionedit_curve = 0.0
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=0)
+                        obj.motionedit_curve = 0.5
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=15)
+                        obj.motionedit_curve = 1.0
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=30)
+                    elif wm.motionedit_type == 'Decrease':
+                        obj.motionedit_curve = 1.0
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=0)
+                        obj.motionedit_curve = 0.5
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=15)
+                        obj.motionedit_curve = 0.0
+                        obj.keyframe_insert(data_path="motionedit_curve", frame=30)
+                else:
+                    if len(fc_mec.keyframe_points) < 3:
+                        continue
+                    if wm.motionedit_type == 'Smooth':
+                        fc_mec.keyframe_points[0].co[1] = 0.0
+                        fc_mec.keyframe_points[1].co[1] = 1.0
+                        fc_mec.keyframe_points[2].co[1] = 0.0
+                    if wm.motionedit_type == 'Increase':
+                        fc_mec.keyframe_points[0].co[1] = 0.0
+                        fc_mec.keyframe_points[1].co[1] = 0.5
+                        fc_mec.keyframe_points[2].co[1] = 1.0
+                    if wm.motionedit_type == 'Decrease':
+                        fc_mec.keyframe_points[0].co[1] = 1.0
+                        fc_mec.keyframe_points[1].co[1] = 0.5
+                        fc_mec.keyframe_points[2].co[1] = 0.0
+
+                    fc_mec.keyframe_points[0].handle_left_type = 'AUTO_CLAMPED'
+                    fc_mec.keyframe_points[1].handle_left_type = 'AUTO_CLAMPED'
+                    fc_mec.keyframe_points[2].handle_left_type = 'AUTO_CLAMPED'
+                    fc_mec.keyframe_points[0].handle_right_type = 'AUTO_CLAMPED'
+                    fc_mec.keyframe_points[1].handle_right_type = 'AUTO_CLAMPED'
+                    fc_mec.keyframe_points[2].handle_right_type = 'AUTO_CLAMPED'
+                    fc_mec.update()
+        
 
 class MotionEditProperties(Panel):
     bl_label = "Motion Edit"
@@ -315,14 +403,41 @@ class MotionEditHandleTransformOperator(bpy.types.Operator):
             return {'FINISHED'}
 
 
+# properties used by the script
+def init_properties():
+    wm = bpy.types.WindowManager
+    itemlist = [
+    #order: (identifier, name, description, icon, unique number)
+    ('None', '', 'None', 'RADIOBUT_OFF', 0),
+    ('Constant', '', 'Constant', 'NOCURVE', 1),
+    ('Smooth', '', 'Smooth', 'SMOOTHCURVE', 2),
+    ('Increase', '', 'Increase', 'ZOOMIN', 3),
+    ('Decrease', '', 'Decrease', 'ZOOMOUT', 4)
+    ]
+    wm.motionedit_type = bpy.props.EnumProperty(name="motionedit_type", description="motion-edit type", default="None", items=itemlist, update=motionedit_update)
+
+
+# removal of properties when script is disabled
+def clear_properties():
+    props = (
+        "motionedit_type",
+    )
+    wm = bpy.context.window_manager
+    for p in props:
+        if p in wm:
+            del wm[p]
+
+
 addon_keymaps = []
 
 classes = (
+    MotionEditModePanel,
     MotionEditProperties,
     MotionEditHandleTransformOperator,
 )
 
 def register():
+    init_properties()
     for cls in classes:
         bpy.utils.register_class(cls)
 
@@ -351,6 +466,7 @@ def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
 
+    clear_properties()
 
 if __name__ == "__main__":
     register()
