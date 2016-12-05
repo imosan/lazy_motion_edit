@@ -3,7 +3,7 @@
 blender addon
 
 This addon overrirdes blender native short-cuts 'G', 'R'.
-These are the same native behaviour in "None" mode. Just translation or rotation.
+These behave same as native behaviour in "None" mode. It will just translation or rotation.
 You can change whole keys between start(preview) and end(preview) by trarnslate or rotate in "Constant" or "Smooth" mode.
 
 When you translate or rotate an object in 3DView, this addon script adds the dragged value into all the associated fcurves. This means that this addon changes default translation and rotation to a tool as a 'lazy motion editor'.
