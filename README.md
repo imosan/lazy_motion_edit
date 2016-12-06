@@ -12,7 +12,7 @@ This may be usefull when you want to translate or rotate an object already has f
 
 You can also apply the translation or rotation to the object with "motionedit_curve". This curve will be created automatically when the mode is changed to "Smooth". The curve will be used as a weight. 
 
-![alt tag](https://github.com/imosan/motion_edit/blob/master/motion_edit_1.jpg)
+![alt tag](https://github.com/imosan/motion_edit/blob/master/lazy_motion_edit_1.jpg)
 
 "Increase" and "Decrease" changes the first three keys in "motionedit_curve".
 This addon also works on pose bones in Armature object.
