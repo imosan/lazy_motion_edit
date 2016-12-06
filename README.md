@@ -1,4 +1,4 @@
-# motion_edit
+# lazy_motion_edit
 
 blender addon
 
