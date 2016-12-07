@@ -182,6 +182,10 @@ class LazyMotionEditSlerpPose(object):
             return
         scene = bpy.context.scene
 
+        #This is just for bug in 2.78a
+        scene.use_preview_range = not scene.use_preview_range # just change
+        scene.use_preview_range = not scene.use_preview_range # just restore
+
         # store the differences for pos and quat
         self.poses_quat_diff = {}
         self.poses_pos_diff = {}
@@ -221,6 +225,7 @@ class LazyMotionEditSlerpPose(object):
             for (key_w, key_x, key_y, key_z) in zip(fc_w.keyframe_points, fc_x.keyframe_points, fc_y.keyframe_points, fc_z.keyframe_points):
                 t, w = key_w.co
                 if t < scene.frame_preview_start or scene.frame_preview_end < t:
+                    print("t : %f out of range(%f, %f)"%(t, scene.frame_preview_start, scene.frame_preview_end))
                     continue
                 t, x = key_x.co
                 t, y = key_y.co
@@ -294,6 +299,7 @@ class LazyMotionEditSlerpPose(object):
 
     def apply_diff(self, anim, v0, v_diff, frame):
         if self.lazy_motionedit_type() == 'Constant':
+            print("v_diff : " + str(v_diff))
             return v0 + v_diff
         else:
             fc_mec = anim.action.fcurves.find("motionedit_curve", index=0)
